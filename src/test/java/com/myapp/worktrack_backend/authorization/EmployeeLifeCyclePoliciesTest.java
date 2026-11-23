@@ -298,7 +298,7 @@ public class EmployeeLifeCyclePoliciesTest {
         assertDoesNotThrow(() -> employeeLifecyclePolicies.approveRegistration(applicant, new RegistrationApprovalContext("Staff", "D1", 1)));
     }
 
-    @Test //actor is authorized and performs rejection on the application
+    @Test //actor is authorized and performs rejection on the application within scope
     void testRegistrationRejectionAuthorization() {
         Employee actor = new Employee();
         actor.setEmpId("EM00001");
@@ -311,11 +311,85 @@ public class EmployeeLifeCyclePoliciesTest {
         applicant.setRole("Staff");
         applicant.setWorkEmail("xylo@example.com");
         applicant.setWorkspaceId(1);
+        applicant.setDepartmentId("ENG01");
 
-        //mock the dependancies
         when(authenticatedEmployeeDetails.getAuthEmployeeDetails()).thenReturn(actor);
-        //assert the action with normal result
-        when(employeeWorkspaceRepo.isAssignedToWorkspace(actor.getEmpId(), 1)).thenReturn(1L);
+        when(employeeWorkspaceRepo.isAssignedToWorkspaceAndDepartment(actor.getEmpId(), 1, "ENG01")).thenReturn(1L);
+        assertDoesNotThrow(() -> employeeLifecyclePolicies.rejectRegistration(applicant, null));
+    }
+
+    @Test // Admin denied rejection outside assigned department scope
+    void testAdminCannotRejectOutsideAssignedDepartmentScope() {
+        Employee actor = new Employee();
+        actor.setEmpId("EM00001");
+        actor.setRole("Admin");
+        actor.setEmployeeId(1L);
+        actor.setEmployeeStatus("Active");
+
+        Registration applicant = new Registration();
+        applicant.setApplicationStatus("Pending");
+        applicant.setRole("Staff");
+        applicant.setWorkspaceId(1);
+        applicant.setDepartmentId("HR001");
+
+        when(authenticatedEmployeeDetails.getAuthEmployeeDetails()).thenReturn(actor);
+        when(employeeWorkspaceRepo.isAssignedToWorkspaceAndDepartment(actor.getEmpId(), 1, "HR001")).thenReturn(0L);
+
+        assertThrows(AccessDeniedException.class, () -> employeeLifecyclePolicies.rejectRegistration(applicant, null));
+    }
+
+    @Test // Admin cannot reject another Admin registration
+    void testAdminCannotRejectAdminApplicant() {
+        Employee actor = new Employee();
+        actor.setEmpId("EM00001");
+        actor.setRole("Admin");
+        actor.setEmployeeId(1L);
+        actor.setEmployeeStatus("Active");
+
+        Registration applicant = new Registration();
+        applicant.setApplicationStatus("Pending");
+        applicant.setRole("Admin");
+        applicant.setWorkspaceId(1);
+        applicant.setDepartmentId("ENG01");
+
+        when(authenticatedEmployeeDetails.getAuthEmployeeDetails()).thenReturn(actor);
+
+        assertThrows(AccessDeniedException.class, () -> employeeLifecyclePolicies.rejectRegistration(applicant, null));
+    }
+
+    @Test // Super-Admin without Permanent authority cannot reject Super-Admin applicant
+    void testNonPermanentSuperAdminCannotRejectSuperAdminApplicant() {
+        Employee actor = new Employee();
+        actor.setEmpId("SA00001");
+        actor.setRole("Super-Admin");
+        actor.setEmployeeId(5L);
+        actor.setEmployeeStatus("Active");
+
+        Registration applicant = new Registration();
+        applicant.setApplicationStatus("Pending");
+        applicant.setRole("Super-Admin");
+
+        when(authenticatedEmployeeDetails.getAuthEmployeeDetails()).thenReturn(actor);
+        when(permanentSuperAdminRepo.existsByEmployeeEmployeeId(5L)).thenReturn(false);
+
+        assertThrows(AccessDeniedException.class, () -> employeeLifecyclePolicies.rejectRegistration(applicant, null));
+    }
+
+    @Test // Permanent Super-Admin can reject Super-Admin applicant
+    void testPermanentSuperAdminCanRejectSuperAdminApplicant() {
+        Employee actor = new Employee();
+        actor.setEmpId("SA00001");
+        actor.setRole("Super-Admin");
+        actor.setEmployeeId(5L);
+        actor.setEmployeeStatus("Active");
+
+        Registration applicant = new Registration();
+        applicant.setApplicationStatus("Pending");
+        applicant.setRole("Super-Admin");
+
+        when(authenticatedEmployeeDetails.getAuthEmployeeDetails()).thenReturn(actor);
+        when(permanentSuperAdminRepo.existsByEmployeeEmployeeId(5L)).thenReturn(true);
+
         assertDoesNotThrow(() -> employeeLifecyclePolicies.rejectRegistration(applicant, null));
     }
 }

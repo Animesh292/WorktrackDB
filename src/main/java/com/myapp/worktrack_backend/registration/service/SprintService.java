@@ -165,7 +165,9 @@ public class SprintService {
     @Transactional
     public SprintResponseDTO startSprint(Long projectId, Long sprintId) {
         Employee actor = authEmpDetails.getAuthEmployeeDetails();
-        Project project = getProjectOrThrow(projectId);
+        // Acquire pessimistic write lock on the project to serialize concurrent startSprint attempts
+        Project project = projectRepo.findByIdForUpdate(projectId)
+                .orElseThrow(() -> new ProjectNotFoundException("Project not found with id: " + projectId));
 
         projectPermissionService.assertPermission(actor, project, ProjectPermission.MANAGE_SPRINTS);
 

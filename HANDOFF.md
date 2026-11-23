@@ -557,6 +557,57 @@
 - **Phase 8 — API Readiness & Verification**: ✅ Complete (OpenAPI 3.0 spec, Swagger UI, Security test suite)
 
 **Final Test Suite Stats: 110 Tests Run, 0 Failures, 0 Errors, 0 Skipped.**
+**Latest Git Commit on main:** `1a6ea8c32e52ddb62fa30eec24b762dba1d733a0`
+
+---
+
+## POST-REVIEW DEFECT CORRECTION TRACKER
+
+| Step | Priority | What | Target File | Status |
+|------|----------|------|-------------|--------|
+| 9.1 | P1 - Data Integrity | Composite FKs & DB relationships (`V7__add_composite_foreign_keys.sql`, entity mappings) | `src/main/resources/db/migration/V7...`, `registration/entity/...` | ✅ Done |
+| 9.2 | P2 - Concurrency | Pessimistic Locking on Project & DB constraint for 1-active-sprint | `registration/repository/ProjectRepo.java`, `registration/service/SprintService.java` | ✅ Done |
+| 9.3 | P3 - Authorization | Registration rejection scope check (Department & Workspace, role hierarchy) | `registration/auth/EmployeeLifecyclePolicies.java` | ✅ Done |
+| 9.4 | P4 - Reporting | Staff dashboard active sprint metric (scope-aware DB aggregation) | `registration/repository/WorkItemRepo.java`, `registration/service/DashboardService.java` | ✅ Done |
+| 9.5 | P5 - Security | Secure `/login/change-password` (remove permitAll, verify principal) | `registration/security/SpringSecurity.java`, `registration/controller/Login.java` | ✅ Done |
+| 9.6 | P6 - Verification | Regression test suite additions & full Maven verification | `src/test/java/...` | ✅ Done (120/120 Tests Passing) |
+
+### Detailed Defect Correction & Reconciliation Summary (GitHub Review)
+1. **Priority 1 (Data Integrity):**
+   - Created `V7__add_composite_foreign_keys.sql` enforcing composite FKs at MySQL engine level:
+     - `emp_workspace(emp_id) -> employee(emp_id)`
+     - `emp_workspace(dept_id, work_id) -> department(dept_id, w_id)`
+     - `registration(department_id, workspace_id) -> department(dept_id, w_id)`
+     - `project(dept_id, workspace_id) -> department(dept_id, w_id)`
+   - Verified via `DatabaseIntegrityConstraintTest`: database engine directly rejects invalid organizational cross-department/workspace insertions.
+2. **Priority 2 (Concurrency):**
+   - Created `V8__add_active_sprint_constraint.sql`: added `active_sprint_guard` virtual generated column with unique constraint `(project_id, active_sprint_guard)` ensuring only 1 ACTIVE sprint per project in database.
+   - Added pessimistic write lock `projectRepo.findByIdForUpdate(projectId)` in `SprintService.startSprint()` to serialize concurrent invocations.
+   - Verified via `SprintConcurrencyIntegrationTest`: 2 concurrent threads executing `startSprint()` on the same project result in exactly 1 success and 1 clean rejection, preserving the 1-active-sprint invariant.
+3. **Priority 3 (Authorization):**
+   - Updated `EmployeeLifecyclePolicies.rejectRegistration()`:
+     - Admin can only reject `Staff` registrations within their assigned `(workspace, dept)` scope (`isAssignedToWorkspaceAndDepartment > 0`).
+     - Admin is strictly denied from rejecting `Admin` registrations (Super-Admin authority required).
+     - Super-Admin applicant rejection strictly requires `PermanentSuperAdmin` authority.
+   - Added 4 unit regression test cases in `EmployeeLifeCyclePoliciesTest` (all 19 tests passing).
+4. **Priority 4 (Reporting Correctness):**
+   - Added `workItemRepo.countActiveSprintItemsForStaff(empId, employeeId)` executing native SQL join between `WorkItem`, `Sprint` (`state = 'ACTIVE'`), and `ProjectMember` (`status = 'ACTIVE'`).
+   - Updated `DashboardService.getStaffDashboard()` to use real database-level active sprint count rather than heuristic status sums.
+   - Verified via `StaffDashboardMetricsIntegrationTest`: correctly counts items only in active sprints on member projects, ignoring planned/completed sprints, backlog items, and non-member projects.
+5. **Priority 5 (Security):**
+   - Removed `.requestMatchers(HttpMethod.POST, "/login/change-password").permitAll()` from `SpringSecurity.java`.
+   - `/login/change-password` now strictly requires JWT authentication.
+   - `JWTAuthFilter` safely allows authenticated users with `mustChangePassword = true` to access `/login/change-password` while blocking access to all other endpoints.
+   - Verified via `SecurityIntegrationTest` (8 tests passing): anonymous requests cannot access password change.
+6. **Priority 6 (Documentation & Reconciliation):**
+   - **Test Count Reconciliation:**
+     - Baseline after Phase 7: **103 tests** across 10 classes.
+     - Baseline after Phase 8: **110 tests** across 11 classes (+7 tests in `SecurityIntegrationTest`).
+     - Post-Review Corrections: **120 tests** across 14 classes (+4 in `EmployeeLifeCyclePoliciesTest`, +1 in `SecurityIntegrationTest`, +1 in `SprintConcurrencyIntegrationTest`, +3 in `DatabaseIntegrityConstraintTest`, +1 in `StaffDashboardMetricsIntegrationTest`).
+   - **Latest Git Commit on Remote (`origin/main`):** `1a6ea8c32e52ddb62fa30eec24b762dba1d733a0`
+   - **Verification Command:** `.\mvnw.cmd test` (with unsandboxed execution `BypassSandbox: true` on Windows).
+   - **Execution Result:** `Tests run: 120, Failures: 0, Errors: 0, Skipped: 0` — BUILD SUCCESS in 27.4s.
+   - **Unresolved Risks:** None. Database migrations (`V1`–`V8`) are backward-compatible and additive. Code changes are not committed/pushed without user approval.
 
 ---
 

@@ -55,7 +55,6 @@ public class SpringSecurity {
                 .requestMatchers(HttpMethod.GET,  "/register/**").permitAll()
                 // Public — login
                 .requestMatchers(HttpMethod.POST, "/login").permitAll()
-                .requestMatchers(HttpMethod.POST, "/login/change-password").permitAll()
                 // Public — workspace and department dropdowns for registration form
                 .requestMatchers(HttpMethod.GET, "/workspaces/**").permitAll()
                 .requestMatchers(HttpMethod.GET, "/workspace/**").permitAll()

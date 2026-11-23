@@ -63,13 +63,42 @@ public class EmployeeLifecyclePolicies {
         if ("Staff".equals(actorEmployee.getRole())) {
             throw new AccessDeniedException("Insufficient permission to perform this action");
         }
-        if ("Admin".equals(actorEmployee.getRole())
-                && employeeWorkspaceRepo.isAssignedToWorkspace(actorEmployee.getEmpId(), registration.getWorkspaceId()) == 0) {
-            throw new AccessDeniedException("Insufficient rights to perform the action");
+
+        String targetRole = registration.getRole();
+
+        // 1. Super-Admin applicant rejection: requires Permanent Super-Admin authority
+        if ("Super-Admin".equals(targetRole)) {
+            if (!"Super-Admin".equals(actorEmployee.getRole())) {
+                throw new AccessDeniedException("Insufficient rights to perform the action");
+            }
+            if (!permanentSuperAdminRepo.existsByEmployeeEmployeeId(actorEmployee.getEmployeeId())) {
+                throw new AccessDeniedException("Privileged access denied needs permanent authority to perform the action");
+            }
+            return;
         }
-        if (!"Admin".equals(actorEmployee.getRole()) && !"Super-Admin".equals(actorEmployee.getRole())) {
-            throw new AccessDeniedException("Permission denied for invalid role");
+
+        // 2. Admin applicant rejection: requires Super-Admin authority (Admin cannot reject Admin)
+        if ("Admin".equals(targetRole)) {
+            if (!"Super-Admin".equals(actorEmployee.getRole())) {
+                throw new AccessDeniedException("Permission denied cannot act on same or higher role. Privileged access required");
+            }
+            return;
         }
+
+        // 3. Staff applicant rejection: Super-Admin has global scope; Admin is strictly scoped to assigned (workspace, dept)
+        if ("Super-Admin".equals(actorEmployee.getRole())) {
+            return;
+        }
+
+        if ("Admin".equals(actorEmployee.getRole())) {
+            if (employeeWorkspaceRepo.isAssignedToWorkspaceAndDepartment(
+                    actorEmployee.getEmpId(), registration.getWorkspaceId(), registration.getDepartmentId()) == 0) {
+                throw new AccessDeniedException("Insufficient rights to reject outside assigned department scope");
+            }
+            return;
+        }
+
+        throw new AccessDeniedException("Permission denied for invalid role");
     }
     public void changeRole(Employee targetEmployee, String requestedRole) {
         //chekc the authEmp Details -> checks if active internally

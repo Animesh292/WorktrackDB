@@ -163,7 +163,7 @@ class SprintServiceTest {
     @Test
     void startSprint_success() {
         when(authEmpDetails.getAuthEmployeeDetails()).thenReturn(actor);
-        when(projectRepo.findById(10L)).thenReturn(Optional.of(project));
+        when(projectRepo.findByIdForUpdate(10L)).thenReturn(Optional.of(project));
 
         Sprint sprint = new Sprint();
         sprint.setId(100L);
@@ -184,7 +184,7 @@ class SprintServiceTest {
     @Test
     void startSprint_anotherActiveSprintExists_rejected() {
         when(authEmpDetails.getAuthEmployeeDetails()).thenReturn(actor);
-        when(projectRepo.findById(10L)).thenReturn(Optional.of(project));
+        when(projectRepo.findByIdForUpdate(10L)).thenReturn(Optional.of(project));
 
         Sprint sprint = new Sprint();
         sprint.setId(100L);
@@ -201,7 +201,7 @@ class SprintServiceTest {
     @Test
     void startSprint_notPlannedState_throwsException() {
         when(authEmpDetails.getAuthEmployeeDetails()).thenReturn(actor);
-        when(projectRepo.findById(10L)).thenReturn(Optional.of(project));
+        when(projectRepo.findByIdForUpdate(10L)).thenReturn(Optional.of(project));
 
         Sprint sprint = new Sprint();
         sprint.setId(100L);

@@ -178,6 +178,18 @@ class SecurityIntegrationTest {
     }
 
     @Test
+    void doFilter_anonymousPasswordChange_leavesUnauthenticatedForSpringSecurity401() throws ServletException, IOException {
+        MockHttpServletRequest request = new MockHttpServletRequest();
+        MockHttpServletResponse response = new MockHttpServletResponse();
+        request.setServletPath("/login/change-password");
+
+        jwtAuthFilter.doFilter(request, response, filterChain);
+
+        verify(filterChain).doFilter(request, response);
+        assertNull(SecurityContextHolder.getContext().getAuthentication());
+    }
+
+    @Test
     void openApiController_servesApiDocsAndSwaggerUi() throws IOException {
         OpenApiController controller = new OpenApiController();
 

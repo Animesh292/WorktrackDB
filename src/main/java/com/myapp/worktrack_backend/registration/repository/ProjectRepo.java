@@ -41,4 +41,8 @@ public interface ProjectRepo extends JpaRepository<Project, Long> {
     List<com.myapp.worktrack_backend.registration.repository.projection.StatusCountProjection> countByDeptGroupedByStatus(@Param("wId") int wId, @Param("deptId") String deptId);
 
     long countByWorkspaceWIdAndDeptId(int workspaceId, String deptId);
+
+    @org.springframework.data.jpa.repository.Lock(jakarta.persistence.LockModeType.PESSIMISTIC_WRITE)
+    @Query("SELECT p FROM Project p WHERE p.projectId = :id")
+    java.util.Optional<Project> findByIdForUpdate(@Param("id") Long id);
 }

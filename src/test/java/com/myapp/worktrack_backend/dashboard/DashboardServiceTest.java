@@ -140,6 +140,7 @@ class DashboardServiceTest {
         when(projectMemberRepo.countByEmployeeEmployeeIdAndStatus(3L, "ACTIVE")).thenReturn(2L);
         when(workItemRepo.countByReporterEmpId("ST001")).thenReturn(4L);
         when(workItemRepo.countByAssigneeEmpIdAndStatus("ST001", WorkItemStatus.BLOCKED)).thenReturn(1L);
+        when(workItemRepo.countActiveSprintItemsForStaff("ST001", 3L)).thenReturn(5L);
 
         StaffDashboardDTO dashboard = dashboardService.getStaffDashboard();
 
@@ -148,6 +149,7 @@ class DashboardServiceTest {
         assertEquals(2L, dashboard.myAccessibleProjectsCount());
         assertEquals(4L, dashboard.myReportedItemsCount());
         assertEquals(1L, dashboard.myBlockedItemsCount());
+        assertEquals(5L, dashboard.myActiveSprintItemsCount());
     }
 
     @Test

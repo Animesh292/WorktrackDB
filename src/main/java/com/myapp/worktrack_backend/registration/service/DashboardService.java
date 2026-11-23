@@ -165,10 +165,8 @@ public class DashboardService {
         long myOverdueItems = workItemRepo.countByAssigneeEmpIdAndDueDateBeforeAndStatusNotIn(
                 actor.getEmpId(), LocalDate.now(), FINISHED_STATUSES);
 
-        // Current sprint items assigned to me
-        long myActiveSprintItems = 0; // count of items assigned in active sprint
-        Long activeSprintWorkload = myItemsByStatus.getOrDefault(WorkItemStatus.IN_PROGRESS.name(), 0L)
-                + myItemsByStatus.getOrDefault(WorkItemStatus.READY.name(), 0L);
+        // Current sprint items assigned to me in active sprints on projects where I am an active member
+        long myActiveSprintItems = workItemRepo.countActiveSprintItemsForStaff(actor.getEmpId(), actor.getEmployeeId());
 
         return new StaffDashboardDTO(
                 actor.getEmpId(),
@@ -176,7 +174,7 @@ public class DashboardService {
                 myAssignedItems,
                 myItemsByStatus,
                 myReportedItems,
-                activeSprintWorkload,
+                myActiveSprintItems,
                 myBlockedItems,
                 myOverdueItems
         );

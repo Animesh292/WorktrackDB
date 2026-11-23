@@ -66,4 +66,7 @@ public interface WorkItemRepo extends JpaRepository<WorkItem, Long>, JpaSpecific
     long countByAssigneeEmpIdAndDueDateBeforeAndStatusNotIn(String empId, java.time.LocalDate date, List<com.myapp.worktrack_backend.registration.entity.WorkItemStatus> finishedStatuses);
 
     long countByAssigneeEmpIdAndStatus(String empId, com.myapp.worktrack_backend.registration.entity.WorkItemStatus status);
+
+    @Query("SELECT COUNT(w) FROM WorkItem w, Sprint s WHERE w.sprintId = s.id AND s.state = com.myapp.worktrack_backend.registration.entity.SprintState.ACTIVE AND w.assignee.empId = :empId AND w.project.projectId IN (SELECT pm.project.projectId FROM ProjectMember pm WHERE pm.employee.employeeId = :employeeId AND pm.status = 'ACTIVE')")
+    long countActiveSprintItemsForStaff(@Param("empId") String empId, @Param("employeeId") Long employeeId);
 }

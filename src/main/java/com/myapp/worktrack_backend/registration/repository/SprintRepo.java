@@ -24,5 +24,7 @@ public interface SprintRepo extends JpaRepository<Sprint, Long> {
 
     long countByState(SprintState state);
 
+    long countByProjectProjectIdAndState(Long projectId, SprintState state);
+
     long countByProjectWorkspaceWIdAndProjectDeptIdAndState(int wId, String deptId, SprintState state);
 }
