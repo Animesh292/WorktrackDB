@@ -1,0 +1,18 @@
+package com.myapp.worktrack_backend.registration.entity;
+
+public enum ProjectPermission {
+    VIEW_PROJECT,
+    UPDATE_PROJECT_METADATA,
+    MANAGE_MEMBERS,
+    CREATE_WORK_ITEMS,
+    UPDATE_OWN_WORK_ITEMS,
+    UPDATE_ANY_WORK_ITEMS,
+    ASSIGN_WORK_ITEMS,
+    CHANGE_WORK_ITEM_STATUS,
+    MANAGE_BACKLOG,
+    MANAGE_SPRINTS,
+    REVIEW_WORK,
+    VIEW_REPORTS,
+    COMMENT,
+    MANAGE_ATTACHMENTS
+}

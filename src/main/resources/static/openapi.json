@@ -1,0 +1,393 @@
+{
+  "openapi": "3.0.3",
+  "info": {
+    "title": "WorkTrack REST API",
+    "description": "Production-grade enterprise REST API for WorkTrack — a hierarchical agile work management, project tracking, sprint iteration, and departmental governance platform.",
+    "version": "1.0.0",
+    "contact": {
+      "name": "WorkTrack Engineering",
+      "email": "support@worktrack.io"
+    }
+  },
+  "servers": [
+    {
+      "url": "http://localhost:8080",
+      "description": "Local development server"
+    }
+  ],
+  "components": {
+    "securitySchemes": {
+      "bearerAuth": {
+        "type": "http",
+        "scheme": "bearer",
+        "bearerFormat": "JWT",
+        "description": "Enter the JWT Bearer token obtained from POST /login"
+      }
+    },
+    "schemas": {
+      "ApiError": {
+        "type": "object",
+        "properties": {
+          "status": { "type": "string", "example": "403 FORBIDDEN" },
+          "message": { "type": "string", "example": "Insufficient role or scope to perform this action" }
+        }
+      },
+      "LoginRequest": {
+        "type": "object",
+        "required": ["empId", "password"],
+        "properties": {
+          "empId": { "type": "string", "example": "EM000001" },
+          "password": { "type": "string", "example": "TempPass123" }
+        }
+      },
+      "LoginResponse": {
+        "type": "object",
+        "properties": {
+          "token": { "type": "string" },
+          "mustChangePassword": { "type": "boolean" },
+          "role": { "type": "string" }
+        }
+      },
+      "CreateProjectRequest": {
+        "type": "object",
+        "required": ["projectKey", "name", "workspaceId", "deptId"],
+        "properties": {
+          "projectKey": { "type": "string", "example": "WT-001" },
+          "name": { "type": "string", "example": "Platform Foundation" },
+          "description": { "type": "string" },
+          "workspaceId": { "type": "integer", "example": 1 },
+          "deptId": { "type": "string", "example": "D001" },
+          "startDate": { "type": "string", "format": "date" },
+          "targetEndDate": { "type": "string", "format": "date" }
+        }
+      },
+      "ProjectResponse": {
+        "type": "object",
+        "properties": {
+          "projectId": { "type": "integer" },
+          "projectKey": { "type": "string" },
+          "name": { "type": "string" },
+          "description": { "type": "string" },
+          "workspaceId": { "type": "integer" },
+          "workspaceName": { "type": "string" },
+          "deptId": { "type": "string" },
+          "createdByEmpId": { "type": "string" },
+          "status": { "type": "string", "enum": ["DRAFT", "ACTIVE", "COMPLETED", "CANCELLED"] },
+          "startDate": { "type": "string", "format": "date" },
+          "targetEndDate": { "type": "string", "format": "date" },
+          "createdAt": { "type": "string", "format": "date-time" },
+          "updatedAt": { "type": "string", "format": "date-time" }
+        }
+      },
+      "CreateWorkItemRequest": {
+        "type": "object",
+        "required": ["title", "type"],
+        "properties": {
+          "title": { "type": "string", "example": "Design Authentication Service" },
+          "description": { "type": "string" },
+          "type": { "type": "string", "enum": ["MISSION", "CAPABILITY", "USER_OUTCOME", "WORK_ITEM", "ACTION_STEP", "DEFECT", "DISCOVERY", "ENHANCEMENT", "CHECKPOINT"] },
+          "priority": { "type": "string", "enum": ["CRITICAL", "HIGH", "MEDIUM", "LOW"] },
+          "estimationPoints": { "type": "integer", "example": 5 },
+          "parentId": { "type": "integer" },
+          "assigneeEmpId": { "type": "string" },
+          "sprintId": { "type": "integer" },
+          "acceptanceCriteria": { "type": "string" }
+        }
+      },
+      "WorkItemResponse": {
+        "type": "object",
+        "properties": {
+          "id": { "type": "integer" },
+          "projectId": { "type": "integer" },
+          "projectKey": { "type": "string" },
+          "itemKey": { "type": "string", "example": "WT-1" },
+          "itemNumber": { "type": "integer" },
+          "title": { "type": "string" },
+          "description": { "type": "string" },
+          "type": { "type": "string" },
+          "status": { "type": "string", "enum": ["BACKLOG", "READY", "IN_PROGRESS", "IN_REVIEW", "BLOCKED", "COMPLETED", "CANCELLED"] },
+          "priority": { "type": "string" },
+          "estimationPoints": { "type": "integer" },
+          "parentId": { "type": "integer" },
+          "parentKey": { "type": "string" },
+          "assigneeEmpId": { "type": "string" },
+          "reporterEmpId": { "type": "string" },
+          "sprintId": { "type": "integer" }
+        }
+      },
+      "CreateSprintRequest": {
+        "type": "object",
+        "required": ["name", "startDate", "endDate"],
+        "properties": {
+          "name": { "type": "string", "example": "Sprint 1" },
+          "goal": { "type": "string", "example": "Complete Core Auth and Project CRUD" },
+          "startDate": { "type": "string", "format": "date" },
+          "endDate": { "type": "string", "format": "date" }
+        }
+      },
+      "SprintResponse": {
+        "type": "object",
+        "properties": {
+          "id": { "type": "integer" },
+          "projectId": { "type": "integer" },
+          "name": { "type": "string" },
+          "goal": { "type": "string" },
+          "startDate": { "type": "string", "format": "date" },
+          "endDate": { "type": "string", "format": "date" },
+          "state": { "type": "string", "enum": ["PLANNED", "ACTIVE", "COMPLETED", "CANCELLED"] },
+          "createdByEmpId": { "type": "string" }
+        }
+      }
+    }
+  },
+  "security": [
+    {
+      "bearerAuth": []
+    }
+  ],
+  "paths": {
+    "/login": {
+      "post": {
+        "tags": ["Auth"],
+        "summary": "Authenticate and get JWT",
+        "security": [],
+        "requestBody": {
+          "required": true,
+          "content": { "application/json": { "schema": { "$ref": "#/components/schemas/LoginRequest" } } }
+        },
+        "responses": {
+          "200": { "description": "Login successful", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/LoginResponse" } } } },
+          "401": { "description": "Invalid credentials", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/ApiError" } } } }
+        }
+      }
+    },
+    "/projects": {
+      "post": {
+        "tags": ["Projects"],
+        "summary": "Create a new Project",
+        "requestBody": {
+          "required": true,
+          "content": { "application/json": { "schema": { "$ref": "#/components/schemas/CreateProjectRequest" } } }
+        },
+        "responses": {
+          "201": { "description": "Project created", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/ProjectResponse" } } } },
+          "403": { "description": "Forbidden - scope restriction" },
+          "409": { "description": "Conflict - duplicate project key" }
+        }
+      }
+    },
+    "/projects/{projectId}": {
+      "get": {
+        "tags": ["Projects"],
+        "summary": "Get project details",
+        "parameters": [
+          { "name": "projectId", "in": "path", "required": true, "schema": { "type": "integer" } }
+        ],
+        "responses": {
+          "200": { "description": "Project details", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/ProjectResponse" } } } },
+          "404": { "description": "Project not found" }
+        }
+      }
+    },
+    "/projects/{projectId}/members": {
+      "get": {
+        "tags": ["Project Members"],
+        "summary": "List project members",
+        "parameters": [
+          { "name": "projectId", "in": "path", "required": true, "schema": { "type": "integer" } }
+        ],
+        "responses": {
+          "200": { "description": "Paginated members list" }
+        }
+      },
+      "post": {
+        "tags": ["Project Members"],
+        "summary": "Add member to project",
+        "parameters": [
+          { "name": "projectId", "in": "path", "required": true, "schema": { "type": "integer" } }
+        ],
+        "responses": {
+          "201": { "description": "Member added" },
+          "409": { "description": "Duplicate membership" }
+        }
+      }
+    },
+    "/projects/{projectId}/work-items": {
+      "get": {
+        "tags": ["Work Items"],
+        "summary": "List and filter work items with pagination",
+        "parameters": [
+          { "name": "projectId", "in": "path", "required": true, "schema": { "type": "integer" } },
+          { "name": "type", "in": "query", "schema": { "type": "string" } },
+          { "name": "status", "in": "query", "schema": { "type": "string" } },
+          { "name": "priority", "in": "query", "schema": { "type": "string" } },
+          { "name": "assigneeEmpId", "in": "query", "schema": { "type": "string" } },
+          { "name": "sprintId", "in": "query", "schema": { "type": "integer" } }
+        ],
+        "responses": {
+          "200": { "description": "Paginated work items" }
+        }
+      },
+      "post": {
+        "tags": ["Work Items"],
+        "summary": "Create a work item with parent-child hierarchy validation",
+        "parameters": [
+          { "name": "projectId", "in": "path", "required": true, "schema": { "type": "integer" } }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": { "application/json": { "schema": { "$ref": "#/components/schemas/CreateWorkItemRequest" } } }
+        },
+        "responses": {
+          "201": { "description": "Work item created", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/WorkItemResponse" } } } },
+          "422": { "description": "Invalid hierarchy constraint" }
+        }
+      }
+    },
+    "/projects/{projectId}/backlog": {
+      "get": {
+        "tags": ["Work Items"],
+        "summary": "View project backlog (unassigned to active sprint)",
+        "parameters": [
+          { "name": "projectId", "in": "path", "required": true, "schema": { "type": "integer" } }
+        ],
+        "responses": {
+          "200": { "description": "Backlog items" }
+        }
+      }
+    },
+    "/projects/{projectId}/sprints": {
+      "get": {
+        "tags": ["Sprints"],
+        "summary": "List sprints for project",
+        "parameters": [
+          { "name": "projectId", "in": "path", "required": true, "schema": { "type": "integer" } },
+          { "name": "state", "in": "query", "schema": { "type": "string" } }
+        ],
+        "responses": {
+          "200": { "description": "Paginated sprints" }
+        }
+      },
+      "post": {
+        "tags": ["Sprints"],
+        "summary": "Create a planned sprint",
+        "parameters": [
+          { "name": "projectId", "in": "path", "required": true, "schema": { "type": "integer" } }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": { "application/json": { "schema": { "$ref": "#/components/schemas/CreateSprintRequest" } } }
+        },
+        "responses": {
+          "201": { "description": "Sprint created", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/SprintResponse" } } } }
+        }
+      }
+    },
+    "/projects/{projectId}/sprints/active": {
+      "get": {
+        "tags": ["Sprints"],
+        "summary": "Get currently active sprint",
+        "parameters": [
+          { "name": "projectId", "in": "path", "required": true, "schema": { "type": "integer" } }
+        ],
+        "responses": {
+          "200": { "description": "Active sprint details", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/SprintResponse" } } } },
+          "404": { "description": "No active sprint" }
+        }
+      }
+    },
+    "/projects/{projectId}/sprints/{sprintId}/start": {
+      "post": {
+        "tags": ["Sprints"],
+        "summary": "Start a planned sprint (enforces 1-active-sprint invariant)",
+        "parameters": [
+          { "name": "projectId", "in": "path", "required": true, "schema": { "type": "integer" } },
+          { "name": "sprintId", "in": "path", "required": true, "schema": { "type": "integer" } }
+        ],
+        "responses": {
+          "200": { "description": "Sprint started", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/SprintResponse" } } } },
+          "409": { "description": "Another sprint is already active" }
+        }
+      }
+    },
+    "/projects/{projectId}/sprints/{sprintId}/complete": {
+      "post": {
+        "tags": ["Sprints"],
+        "summary": "Complete sprint with rollover of unfinished items",
+        "parameters": [
+          { "name": "projectId", "in": "path", "required": true, "schema": { "type": "integer" } },
+          { "name": "sprintId", "in": "path", "required": true, "schema": { "type": "integer" } }
+        ],
+        "responses": {
+          "200": { "description": "Sprint completed and items rolled over" }
+        }
+      }
+    },
+    "/projects/{projectId}/activity": {
+      "get": {
+        "tags": ["Collaboration & Audit"],
+        "summary": "Get project activity history (append-only audit trail)",
+        "parameters": [
+          { "name": "projectId", "in": "path", "required": true, "schema": { "type": "integer" } }
+        ],
+        "responses": {
+          "200": { "description": "Paginated activity logs" }
+        }
+      }
+    },
+    "/notifications": {
+      "get": {
+        "tags": ["Collaboration & Audit"],
+        "summary": "Get in-app notifications for authenticated user",
+        "responses": {
+          "200": { "description": "Notifications page" }
+        }
+      }
+    },
+    "/dashboards/super-admin": {
+      "get": {
+        "tags": ["Dashboards"],
+        "summary": "Global executive dashboard across workspaces",
+        "responses": {
+          "200": { "description": "Super-Admin metrics" },
+          "403": { "description": "Forbidden - Super-Admin only" }
+        }
+      }
+    },
+    "/dashboards/department/{workspaceId}/{deptId}": {
+      "get": {
+        "tags": ["Dashboards"],
+        "summary": "Departmental executive dashboard (Admin / HOD scope)",
+        "parameters": [
+          { "name": "workspaceId", "in": "path", "required": true, "schema": { "type": "integer" } },
+          { "name": "deptId", "in": "path", "required": true, "schema": { "type": "string" } }
+        ],
+        "responses": {
+          "200": { "description": "Departmental metrics" },
+          "403": { "description": "Forbidden - scope restriction" }
+        }
+      }
+    },
+    "/dashboards/staff": {
+      "get": {
+        "tags": ["Dashboards"],
+        "summary": "Personal staff dashboard",
+        "responses": {
+          "200": { "description": "Staff personal metrics" }
+        }
+      }
+    },
+    "/projects/{projectId}/metrics": {
+      "get": {
+        "tags": ["Dashboards"],
+        "summary": "Project health, velocity & estimation metrics",
+        "parameters": [
+          { "name": "projectId", "in": "path", "required": true, "schema": { "type": "integer" } }
+        ],
+        "responses": {
+          "200": { "description": "Project metrics and burndown summary" }
+        }
+      }
+    }
+  }
+}
